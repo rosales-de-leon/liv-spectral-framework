@@ -1,0 +1,10 @@
+Metadata-Version: 2.2
+Name: liv_spectral_framework
+Version: 0.1.0
+Summary: Framework for spectral LIV studies using EBL absorption in blazar spectra
+Author: Alberto Rosales de Leon
+Requires-Python: >=3.9.21
+License-File: LICENSE
+Dynamic: author
+Dynamic: requires-python
+Dynamic: summary
