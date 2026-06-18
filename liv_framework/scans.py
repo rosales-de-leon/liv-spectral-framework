@@ -23,81 +23,7 @@ def combine_liv_profiles(scans):
             "deltaTS": delta_ts
         }
 
-    return combined_profiles
-    
-    
-def plot_combined_liv_profiles(scans, combined_profiles):
-
-    model_names = list(combined_profiles.keys())
-    n_models = len(model_names)
-
-    fig, axes = plt.subplots(
-        n_models, 1,
-        figsize=(7, 4 * n_models),
-        sharex=True
-    )
-
-    if n_models == 1:
-        axes = [axes]
-        
-    # color map for nights
-    colors = plt.cm.tab10(np.linspace(0, 1, 10))
-
-    for ax, model in zip(axes, model_names):
-
-        dfs = scans[model]
-
-        # --------------------------------------------------
-        # Plot individual night profiles
-        # --------------------------------------------------
-        for i, df in enumerate(dfs):
-
-            xi = df["xi_n"].values
-            deltaTS = df["delta_ts"].values
-
-            ax.plot(
-                xi,
-                deltaTS,
-                color=colors[i],
-                alpha=0.3,
-                lw=1,
-                label=BB_labels[i]
-            )
-
-        # --------------------------------------------------
-        # Plot combined profile
-        # --------------------------------------------------
-        prof = combined_profiles[model]
-
-        ax.plot(
-            prof["xi"],
-            prof["deltaTS"],
-            color="red",
-            lw=2.5,
-            label="Combined likelihood"
-        )
-
-        # 95% CL line
-        ax.axhline(
-            2.71,
-            color="black",
-            ls="--",
-            label="95% CL"
-        )
-
-        ax.set_xscale("symlog")
-
-        ax.set_ylabel(r"$\Delta TS$")
-        ax.set_title(f"LIV Likelihood — {model}")
-
-        ax.grid(alpha=0.3)
-        ax.legend(ncol=2, fontsize=8, loc=2)
-
-    axes[-1].set_xlabel(r"$\xi_1$")
-
-    plt.tight_layout()
-    plt.show()
-    
+    return combined_profiles    
     
 def compute_dataset_min_profiles(scan_dir, BB_labels, model_names):
 
@@ -156,49 +82,6 @@ def combine_dataset_profiles(dataset_profiles):
     }
 
     return combined_profile
-    
-def plot_final_stacked_profile(dataset_profiles, combined_profile):
-
-    plt.figure(figsize=(7,5))
-
-    # individual nights
-    for bb, prof in dataset_profiles.items():
-
-        plt.plot(
-            prof["xi"],
-            prof["deltaTS"],
-            alpha=0.6,
-            lw=1,
-            label=bb
-        )
-
-    # combined
-    plt.plot(
-        combined_profile["xi"],
-        combined_profile["deltaTS"],
-        color="black",
-        lw=2.5,
-        label="Combined"
-    )
-
-    plt.axhline(2.71, ls="--", color="black", label="95% CL")
-
-    plt.axvline(0, color="gray")
-
-    #plt.xscale("symlog")
-
-    plt.xlabel(r"$\xi_1$")
-    plt.ylabel(r"$\Delta TS$")
-
-    #plt.title("Stacked LIV Likelihood Profile")
-
-    plt.legend(ncol=2, fontsize=8)
-
-    plt.grid(alpha=0.3)
-
-    plt.tight_layout()
-    plt.show()
-    
     
 def compute_xi_confidence_interval(xi, delta_ts, delta_ts_level=2.71):
     """
