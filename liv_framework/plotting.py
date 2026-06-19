@@ -480,7 +480,104 @@ def plot_constraints_updated(
     )
     
     plt.tight_layout()
+    plt.show()
     
-#    plt.savefig("/home/alberto/Documents/LIV_STUDIES/Figures/BL Lac/Linear_LIV_95_CL_BL_Lac.pdf", dpi=400)
+    
+# ---------------------------------------------------------
+### FRANCESCHINI EBL+LIV PLOT FUNCTION
+# ---------------------------------------------------------
+def plot_franceschini_results(E_gamma_vals, xi_n_array, results_fra, z, n_order):
+    """
+    Grafica la opacidad (tau) cargando los datos desde results_fra.
+    Las curvas superluminales explotan verticalmente al alcanzar el umbral.
+    """
+    plt.figure(figsize=(8, 7))
+    
+    # Energías en TeV para el eje X
+    energy_tev = E_gamma_vals.to(u.TeV).value
+    
+    # Eje X original
+    x_raw = E_gamma_vals.to(u.TeV).value
+    # Eje X suavizado (1000 puntos para que se vea curvo)
+    x_smooth = np.logspace(np.log10(x_raw.min()), np.log10(x_raw.max()), 1000)
+    
+    # Definición de colores (Azules para subluminal, Rojos para superluminal)
+    # Filtramos xi para las paletas
+    sub_vals = [x for x in xi_n_array if x < 0]
+    sup_vals = [x for x in xi_n_array if x > 0]
+    
+    colors_sub = plt.cm.Blues(np.linspace(0.5, 0.9, len(sub_vals)))
+    colors_sup = plt.cm.Reds(np.linspace(0.5, 0.9, len(sup_vals)))
+    
+    sub_count = 0
+    sup_count = 0
 
+    for i, xi in enumerate(xi_n_array):
+        y_raw = np.array(results_fra[i])
+        
+        # --- CASO ESTÁNDAR O SUBLUMINAL (Suavizado Spline) ---
+        if xi <= 0:
+            # Interpolación en espacio log-log para mayor estabilidad
+            spline = make_interp_spline(np.log10(x_raw), np.log10(np.maximum(y_raw, 1e-10)), k=1)
+            y_smooth = 10**spline(np.log10(x_smooth))
+            
+            color = 'black' if xi == 0 else colors_sub[sub_count]
+            ls = '-'
+            label = "Standard EBL" if xi == 0 else f"$\\xi_n = {xi:.0e}$"
+            if xi < 0: sub_count += 1
+            
+            plt.plot(x_smooth, y_smooth, color=color, ls=ls, lw=2, label=label)
+
+        # --- CASO SUPERLUMINAL (Suavizado + Explosión) ---
+        else:
+            color = colors_sup[sup_count]
+            sup_count += 1
+            
+            # Buscamos el punto de explosión
+            idx_max = np.argmax(y_raw)
+            # Solo suavizamos hasta antes de la explosión
+            x_to_smooth = x_raw[:idx_max+1]
+            y_to_smooth = y_raw[:idx_max+1]
+            
+            if len(x_to_smooth) > 3: # Necesitamos puntos suficientes para el spline (k=3)
+                x_smooth_lim = np.logspace(np.log10(x_to_smooth.min()), np.log10(x_to_smooth.max()), 1000)
+                spline = make_interp_spline(np.log10(x_to_smooth), np.log10(np.maximum(y_to_smooth, 1e-10)), k=1)
+                y_smooth_lim = 10**spline(np.log10(x_smooth_lim))
+                
+                # Graficamos la parte curva
+                plt.plot(x_smooth_lim, y_smooth_lim, color=color, ls='-', lw=2)
+                # Graficamos la explosión vertical al final
+                plt.vlines(x_to_smooth[-1], y_to_smooth[-1], 1e8, color=color, ls='-', lw=2, label=f"$\\xi_n = {xi:.0e}$")
+            else:
+                # Si hay muy pocos puntos, graficar normal para evitar errores de spline
+                plt.plot(x_raw, y_raw, color=color, ls='--', lw=1.8, label=f"$\\xi_n = {xi:.0e}$ (Sup)")
+    
+    
+    # Configuración de ejes y estética
+    plt.rcParams.update({
+    "font.size": 18,
+    "axes.labelsize": 20,
+    "legend.fontsize": 10,
+    "xtick.direction": "in",
+    "ytick.direction": "in",
+    "xtick.top": True,
+    "ytick.right": True,
+    })
+    
+    plt.xscale('log')
+    plt.yscale('log')
+    
+    plt.xlim(1e-2, 1e2)
+    plt.ylim(1e-3, 1e4) # Límite superior para visualizar la explosión
+    
+    plt.xlabel(r'$E_{\gamma}$ [TeV]', fontsize=18)
+    plt.ylabel(r'$\tau(E_{\gamma})$', fontsize=18)
+    plt.title(f'Franceschini Model Opacity (z={z}, n={n_order})', fontsize=18)
+    
+    plt.grid(True, which="both", ls="--", alpha=0.35)
+    
+    # Leyenda en dos columnas para mejor visibilidad
+    plt.legend(ncol=1, fontsize=10, loc='upper left')
+    
+    plt.tight_layout()
     plt.show()
