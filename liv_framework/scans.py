@@ -182,20 +182,4 @@ def compute_one_sided_limit(xi, delta_ts, level=2.71, side="positive"):
         return f(level)
     except:
         return np.nan
-        
-def xi_to_eqg_limit(xi_limit):
-    """
-    Convert xi_n limit to E_QG limit.
-
-    Parameters
-    ----------
-    xi_limit : float
-        absolute value of xi_n limit
-    n : int
-        LIV order (1 or 2)
-
-    Returns
-    -------
-    E_QG in eV
-    """
-    return E_PLANCK * (1.0 / np.abs(xi_limit))
+        `

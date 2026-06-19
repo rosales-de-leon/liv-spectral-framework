@@ -1,22 +1,27 @@
-import os
-import json
 import numpy as np
+import matplotlib.pyplot as plt
 import astropy.units as u
+from astropy.table import Table, unique
+from astropy.constants import c, G, M_sun, m_e, m_p, h
+import pkg_resources
 
-from astropy.constants import m_e
-
-from agnpy.spectra import (
-    PowerLaw,
-    BrokenPowerLaw,
-    LogParabola,
-    ExpCutoffPowerLaw,
-)
-
+# import agnpy classes
+from agnpy.spectra import PowerLaw, BrokenPowerLaw, ExpCutoffPowerLaw, LogParabola
+from agnpy.fit import ExternalComptonModel, load_gammapy_flux_points, SynchrotronSelfComptonModel, add_systematic_errors_gammapy_flux_points
+from agnpy.utils.plot import load_mpl_rc, sed_y_label, plot_sed
+from agnpy.targets import SphericalShellBLR, RingDustTorus, PointSourceBehindJet, SSDisk
+from agnpy.absorption import Absorption
 from agnpy.emission_regions import Blob
-from agnpy.fit import SynchrotronSelfComptonModel, add_systematic_errors_gammapy_flux_points
+from agnpy.synchrotron import Synchrotron
+from agnpy.compton import SynchrotronSelfCompton
+load_mpl_rc()
 
+# import gammapy classes
 from gammapy.datasets import FluxPointsDataset, Datasets
 from gammapy.estimators import FluxPoints
+from gammapy.modeling.models import SkyModel
+from gammapy.modeling import Fit
+
 
 def load_multiple_gammapy_flux_points(sed_paths, E_min, E_max, systematics_dict=None):
     """Load multiple MWL SEDs from different .ecsv files and merge them into a single dataset.
