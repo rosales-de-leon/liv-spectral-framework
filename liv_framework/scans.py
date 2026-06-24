@@ -182,4 +182,3 @@ def compute_one_sided_limit(xi, delta_ts, level=2.71, side="positive"):
         return f(level)
     except:
         return np.nan
-        `
