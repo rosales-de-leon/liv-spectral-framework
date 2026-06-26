@@ -223,11 +223,11 @@ def tau_liv(E_gamma, z, n_interp, epsilon_grid, xi_n=0.0, n_order=1):
     # --- LIV handling ---
     if xi_n == 0:
         sign = 0
-        E_LIV = np.inf
     else:
         sign = np.sign(xi_n)
         E_pl = (1.22e19 * u.GeV).to(u.eV)
         E_LIV = (E_pl / abs(xi_n)).to(u.eV).value
+        
 
     def delta_liv(E_local):
         if xi_n == 0:
@@ -238,6 +238,18 @@ def tau_liv(E_gamma, z, n_interp, epsilon_grid, xi_n=0.0, n_order=1):
             return sign * (E_local**4) / (E_LIV**2)
         else:
             raise ValueError("n_order must be 1 or 2")
+            
+    # ---------------------------------------------------------
+    # Vacuum photon decay for superluminal LIV
+    # ---------------------------------------------------------
+
+    if sign > 0:
+
+        E_max_path = E_gamma_val * (1 + z)
+
+        if delta_liv(E_max_path) >= s_thresh:
+            return 1e+30  #huge value instead of +inf 
+
 
     # --- Integrals ---
     def redshift_integral(z_int):
@@ -261,7 +273,7 @@ def tau_liv(E_gamma, z, n_interp, epsilon_grid, xi_n=0.0, n_order=1):
             if s_max <= s_min:
                 return 0.0
             
-            ### condition for superluminal integration
+            ### condition if there is a negligible contribution
             if np.log(s_max) - np.log(s_min) < 1e-8:
                 return 0.0
 
@@ -269,7 +281,7 @@ def tau_liv(E_gamma, z, n_interp, epsilon_grid, xi_n=0.0, n_order=1):
             def s_integral_log(u):
                 s = np.exp(u)
                 sigma = sigma_breit_wheeler_s_numba(s)
-                return sigma * (s - delta) * s
+                return sigma * (s - delta) * s  # extra s from log-substitution
 
             u_min = np.log(s_min)
             u_max = np.log(s_max)
@@ -277,15 +289,17 @@ def tau_liv(E_gamma, z, n_interp, epsilon_grid, xi_n=0.0, n_order=1):
             s_int, _ = quad(s_integral_log, u_min, u_max,
                             epsabs=1e-4, epsrel=1e-3, limit=60)
 
-            return (n_epsilon / epsilon) * s_int
+            return (n_epsilon / epsilon) * s_int  # 1/epsilon from log-substitution
 
         delta = delta_liv(E_local)
-
         epsilon_min = (s_thresh - delta) / (4 * E_local)
         epsilon_max = np.max(epsilon_grid)
 
-        if epsilon_min <= 0 or epsilon_min >= epsilon_max:
+        if epsilon_min >= epsilon_max:
             return 0.0
+
+        if epsilon_min <= 0:
+            epsilon_min = max(epsilon_min, epsilon_grid[0])   # this is a small positive value
 
         epsilon_int, _ = quad(
             epsilon_integral_log,
@@ -314,7 +328,8 @@ def tau_liv(E_gamma, z, n_interp, epsilon_grid, xi_n=0.0, n_order=1):
 
     return final_prefactor * int_final
     
-    
+
+
 # ===============================
 # MULTIPROCESSING FUNCTION
 # ===============================
@@ -327,26 +342,39 @@ def compute_tau_single(args):
 # ===============================
 # PARALLEL COMPUTATION
 # ===============================
-def compute_model(n_interp, epsilon_grid, model_name, n_order=1):
-    """Parallel computation across energy and LIV arrays."""
+def compute_model(n_interp, epsilon_grid, model_name, xi_n_array, E_gamma_vals, z, n_order=1):
+
     model_results = []
 
-    for xi_n_val in xi_n_array:
-        print(f"[{model_name}] Processing xi_n = {xi_n_val} ...")
+    # Parallel processing
+    with ProcessPoolExecutor() as executor:
 
-        # Removed ebl_frame from the args list as it's no longer needed
-        args_list = [
-            (E, xi_n_val, z, n_interp, epsilon_grid, n_order) 
-            for E in E_gamma_vals
-        ]
+        for xi_n_val in xi_n_array:
 
-        with ProcessPoolExecutor() as executor:
-            tau_vals = list(executor.map(compute_tau_single, args_list))
+            print(f"[{model_name}] Processing xi_n = {xi_n_val:.3e}")
 
-        model_results.append(tau_vals)
+            args_list = [
+                (
+                    E,
+                    xi_n_val,
+                    z,
+                    n_interp,
+                    epsilon_grid,
+                    n_order,
+                )
+                for E in E_gamma_vals
+            ]
 
-    return np.array(model_results)
-    
+            tau_vals = list(
+                executor.map(
+                    compute_tau_single,
+                    args_list
+                )
+            )
+
+            model_results.append(tau_vals)
+
+    return np.asarray(model_results)    
 # ---------------------------------------------------------
 ### DOMINGUEZ EBL+LIV SPECTRAL MODEL IN GAMMAPY
 # ---------------------------------------------------------

@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "liv-spectral-framework"
+version = "0.1.0"
+description = "Framework for LIV studies using gamma-ray absorption"
+readme = "README.md"
+requires-python = ">=3.9"
+
+authors = [
+    {name = "Alberto Rosales de Leon"}
+]
+
+[tool.setuptools]
+packages = ["liv_framework"]
